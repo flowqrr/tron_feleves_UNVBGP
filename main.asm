@@ -45,35 +45,129 @@ FoMenu:
 	
 	; a leutott billentyu a space volt-e
     cmp al, 32
-	jz Valtas
+	jz Init
 	
     ; a leutott billentyu esc volt-e
 	cmp al, 27
-	jz ProgramVege
+	jz PVJump
 
-    ; ha sem 1, sem esc volt a billentyu
+    ; ha sem space, sem esc volt a billentyu
     jmp FoMenu
+
+Init:
+	mov dl, 100 ; x koordinata
+	mov dh, 100 ; y koordinata
+	push dx
 
 Valtas:
     ; valtas vga (320x200) uzemmodba
     mov ax, 13h
     int 10h
 
-    mov ah, 0ch ; column = 160
-    mov cx, 100
-    mov dx, 100
-    mov al, 48 ; color = red
-    int 10h
+    ; kepernyo memoria beallitas
+	mov ax, 0a000h   ; video kezdocime
+	mov es, ax       ; extra szegmens
 
-    ; wait for key press
-    mov ah, 00h
-    int 16h
+	; pixel =  y * 320 + x
 
+Rajz:
+	pop dx		; dx-ben vannak a koordinatak (dl: x, dh: y)
+	xor ah, ah  ; kiuritjuk az ah-t
+	
+	mov al, dh  ; az al-be toltjuk az y koordinatat
+	push dx		; a dx-et verembe rakjuk, mert abban van meg az x (es a mul felul fogja irni)
+
+	mov bx, 320 ; bx-be 320
+	mul bx		; y * 320 (az ax-ben levo dologgal szorozza meg a bx-et, ami most 320-szor az al-ben levo y koordinata)
+	
+	pop dx		; elovesszuk a verembol a koordinatakat (dl: x, dh: y)
+	add al, dl  ; hozzaadjuk az x koordinatat az al-hez
+
+	jnc Pixel
+	inc ah
+
+Pixel:
+	push dx
+	mov di, ax
+	mov al, 4		; beallitjuk a pixel szinet
+	mov es:[di], al ; al tartalmanak a betoltese az extra szegmensnek a di altal mutatott helyere
+
+Var:
+	; varakozas billentyu leutesere
+	xor ah, ah
+	int 16h
+
+	; ha esc-et nyomott
+	cmp al, 27
+	jz Vissza
+
+	; ha bal nyilt nyomott
+	cmp ah, 75
+	jz Balra
+
+	; ha jobb nyilt nyomott
+	cmp ah, 77
+	jz Jobbra
+
+	; ha felfele nyilt nyomott
+	cmp ah, 72
+	jz Felfele
+
+	; lefele nyilt nyomott
+	cmp ah, 80
+	jz Lefele
+
+	; addig varunk amig valamit nem nyom
+	jmp Var
+
+; teleport kapu a program vegehez
+PVJump:
+	jmp ProgramVege
+
+Balra:
+	pop dx
+	dec dl
+	cmp dl, 1
+	jnc Tarol
+	inc dl
+	jmp Tarol
+
+Jobbra:
+	pop dx
+	inc dl
+	cmp dl, 250
+	jc Tarol
+	dec dl
+	jmp Tarol
+
+Felfele:
+	pop dx
+	dec dh
+	cmp dh, 1
+	jnc Tarol
+	inc dh
+	jmp Tarol
+
+Lefele:
+	pop dx
+	inc dh
+	cmp dh, 200
+	jc Tarol
+	dec dh
+	jmp Tarol
+
+Tarol:
+	push dx
+	jmp Rajz
+
+Vissza:
     ; visszavaltas vga uzemmodrol
     mov ax, 03h
     int 10h
 
 ProgramVege:
+	pop dx
+
 	; vezerles visszaadasa
     mov ax, 4c00h
 	int 21h
