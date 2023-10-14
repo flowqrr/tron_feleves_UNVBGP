@@ -37,12 +37,6 @@ FoMenu:
 	xor ax, ax     ; ax nullazasa
 	int 16h        ; varakozas egy billenytu lenyomasara
 	
-    ; beadott billentyu eltarolasa
-	mov bx, ax
-	mov ax, 03h
-	int 10h
-	mov ax, bx
-	
 	; a leutott billentyu a space volt-e
     cmp al, 32
 	jz Init
@@ -71,6 +65,10 @@ Init:
 	; 4 - le
 	mov jatekos1irany, 2
 	mov jatekos2irany, 1
+
+	; ido inicializalasa (a verembe megy a 0)
+	xor dx, dx
+	push dx
 
 Valtas:
     ; valtas vga (320x200) uzemmodba
@@ -134,11 +132,64 @@ Rajz2:
 
 Var:
 	; varakozas billentyu leutesere
-	xor ah, ah
+	mov ah, 01h
 	int 16h
+	jnz CheckBillentyu
 	
-	; al = lenyomott bill ascii kodja
-	; ah = scan code
+NincsBill:
+	xor ah, ah
+	int 1ah		; ido beolvasasa a cx:dx-be
+
+	pop cx		; regi ido kivetele
+	push cx		; regi ido visszatetele
+	mov ax, dx	; aktualis ido mentese ax-be
+	sub dx, cx	; dx-ben: eltelt = aktualis - regi
+	push ax		; aktualis ido a verembe
+
+	; al-be berakjuk azt az idot, amennyi elteltevel mozogni kell
+	mov al, 1
+	xor ah, ah
+	cmp dx, ax
+
+	pop ax		; a verem visszaallitasa (hogy ne legyen mindig egyre tobb dolog benne)
+
+	jc Var		; loop
+
+	pop cx		; regi ido kivetele a verembol
+	push ax		; aktualis ido elmentese
+
+Check1:
+	cmp jatekos1irany, 1
+	jz Jobbra1Jump
+
+	cmp jatekos1irany, 2
+	jz Balra1Jump
+
+	cmp jatekos1irany, 3
+	jz Fel1Jump
+
+	cmp jatekos1irany, 4
+	jz Le1Jump
+
+Check2:
+	cmp jatekos2irany, 1
+	jz Jobbra2Jump
+
+	cmp jatekos2irany, 2
+	jz Balra2Jump
+
+	cmp jatekos2irany, 3
+	jz Fel2Jump
+
+	cmp jatekos2irany, 4
+	jz Le2Jump
+
+; al = lenyomott bill ascii kodja
+; ah = scan code
+CheckBillentyu:
+	; szinkronba visszavaltas, ahol kiolvassuk a lenyomott billentyut
+	mov ah, 00h
+	int 16h
 
 	; ha esc-et nyomott
 	cmp al, 27
@@ -182,8 +233,6 @@ Var:
 
 VisszaJump:
 	jmp Vissza
-
-
 Jobbra1Jump:
 	jmp Jobbra1
 Balra1Jump:
@@ -209,12 +258,11 @@ Jobbra1:
 	mov ax, [jatekos1y]
     mov [jatekos1volty], ax
 
-	inc [jatekos1x]
-	cmp [jatekos1x], 320
+	inc [jatekos1x]			; x koordinatat noveljuk
+	cmp [jatekos1x], 320	; megnezzuk hogy meg a palyan van-e
 	mov [jatekos1irany], 1
-	jc Rajz1Jump
-	dec [jatekos1x]
-	jmp Rajz1
+	jc Check2Jump			; ha kisebb jott ki mint 1 (tehat van carry - negativ - meg a palyan van), akkor ugrunk a 2. jatekos checkolasara, mert annak a koordinatait is meg kell nezni mielott rajzolunk
+	dec [jatekos1x]			; kulonben noveljuk
 
 Balra1:
 	mov ax, [jatekos1x]
@@ -222,12 +270,11 @@ Balra1:
 	mov ax, [jatekos1y]
     mov [jatekos1volty], ax
 
-	dec [jatekos1x]		; x koordinatat csokkentjuk
-	cmp [jatekos1x], 1  ; megnezzuk hogy meg a palyan van-e
+	dec [jatekos1x]
+	cmp [jatekos1x], 1
 	mov [jatekos1irany], 2
-	jnc Rajz1Jump			; ha NEM kisebb jott ki mint 1 (tehat meg a palyan van), akkor kirajzoljuk
-	inc [jatekos1x]		; kulonben noveljuk
-	jmp Rajz1			; es akkor rajzoljuk ki
+	jnc Check2Jump
+	inc [jatekos1x]
 
 Fel1:
 	mov ax, [jatekos1x]
@@ -238,9 +285,8 @@ Fel1:
 	dec [jatekos1y]
 	cmp [jatekos1y], 1
 	mov [jatekos1irany], 3
-	jnc Rajz1Jump
+	jnc Check2Jump
 	inc [jatekos1y]
-	jmp Rajz1
 
 Le1:
 	mov ax, [jatekos1x]
@@ -251,12 +297,11 @@ Le1:
 	inc [jatekos1y]
 	cmp [jatekos1y], 200
 	mov [jatekos1irany], 4
-	jc Rajz1Jump
+	jc Check2Jump
 	dec [jatekos1y]
-	jmp Rajz1
 
-Rajz1Jump:
-	jmp Rajz1
+Check2Jump:
+	jmp Check2
 
 Jobbra2:
 	mov ax, [jatekos2x]
@@ -267,9 +312,8 @@ Jobbra2:
 	inc [jatekos2x]
 	cmp [jatekos2x], 320
 	mov [jatekos2irany], 1
-	jc Rajz2Jump
+	jc Rajz1Jump
 	dec [jatekos2x]
-	jmp Rajz2
 
 Balra2:
 	mov ax, [jatekos2x]
@@ -280,9 +324,8 @@ Balra2:
 	dec [jatekos2x]		; x koordinatat csokkentjuk
 	cmp [jatekos2x], 1  ; megnezzuk hogy meg a palyan van-e
 	mov [jatekos2irany], 2
-	jnc Rajz2Jump			; ha NEM kisebb jott ki mint 1 (tehat meg a palyan van), akkor kirajzoljuk
+	jnc Rajz1Jump			; ha NEM kisebb jott ki mint 1 (tehat meg a palyan van), akkor kirajzoljuk
 	inc [jatekos2x]		; kulonben noveljuk
-	jmp Rajz2			; es akkor rajzoljuk ki
 
 Fel2:
 	mov ax, [jatekos2x]
@@ -293,9 +336,8 @@ Fel2:
 	dec [jatekos2y]
 	cmp [jatekos2y], 1
 	mov [jatekos2irany], 3
-	jnc Rajz2Jump
+	jnc Rajz1Jump
 	inc [jatekos2y]
-	jmp Rajz2
 
 Le2:
 	mov ax, [jatekos2x]
@@ -306,12 +348,12 @@ Le2:
 	inc [jatekos2y]
 	cmp [jatekos2y], 200
 	mov [jatekos2irany], 4
-	jc Rajz2Jump
+	jc Rajz1Jump
 	dec [jatekos2y]
-	jmp Rajz2
 
-Rajz2Jump:
-	jmp Rajz2
+; miutan minden jatekos mozgatasa megvolt, rajzolunk
+Rajz1Jump:
+	jmp Rajz1
 
 Vissza:
     ; visszavaltas vga uzemmodrol
@@ -334,6 +376,7 @@ menu2:
 Code Ends
 
 Data Segment
+	; dw - define word (allocates 2 bytes)
 	jatekos1x dw 0,
 	jatekos1y dw 0,
 	jatekos2x dw 0,
