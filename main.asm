@@ -55,9 +55,8 @@ FoMenu:
     jmp FoMenu
 
 Init:
-	mov dl, 100 ; x koordinata
-	mov dh, 100 ; y koordinata
-	push dx
+	mov jatekos1x, 10 ; x koordinata
+	mov jatekos1y, 10 ; y koordinata
 
 Valtas:
     ; valtas vga (320x200) uzemmodba
@@ -68,29 +67,18 @@ Valtas:
 	mov ax, 0a000h   ; video kezdocime
 	mov es, ax       ; extra szegmens
 
-	; pixel =  y * 320 + x
+; pixel =  y * 320 + x
+Szamol1:
+	mov ax, [jatekos1y] ; ax-be y
+	mov cx, 320			; cx-be 320
+	mul cx				; ax-ban levovel szorozzuk a 320-at (y * 320)
 
-Rajz:
-	pop dx		; dx-ben vannak a koordinatak (dl: x, dh: y)
-	xor ah, ah  ; kiuritjuk az ah-t
-	
-	mov al, dh  ; az al-be toltjuk az y koordinatat
-	push dx		; a dx-et verembe rakjuk, mert abban van meg az x (es a mul felul fogja irni)
+	add ax, [jatekos1x] ; ax-ben levo eredmenyhez adjuk az x-et
 
-	mov bx, 320 ; bx-be 320
-	mul bx		; y * 320 (az ax-ben levo dologgal szorozza meg a bx-et, ami most 320-szor az al-ben levo y koordinata)
-	
-	pop dx		; elovesszuk a verembol a koordinatakat (dl: x, dh: y)
-	add al, dl  ; hozzaadjuk az x koordinatat az al-hez
-
-	jnc Pixel
-	inc ah
-
-Pixel:
-	push dx
-	mov di, ax
-	mov al, 4		; beallitjuk a pixel szinet
-	mov es:[di], al ; al tartalmanak a betoltese az extra szegmensnek a di altal mutatott helyere
+Pixel1:
+	mov di, ax			; di-be rakjuk a kiszamolt erteket
+	mov al, 4			; az also reszebe a szint toltjuk (piros)
+	mov es:[di], al     ; az es szegmens di altal mutatott reszet az al-ben levo szinure szinezi
 
 Var:
 	; varakozas billentyu leutesere
@@ -103,19 +91,19 @@ Var:
 
 	; ha bal nyilt nyomott
 	cmp ah, 75
-	jz Balra
+	jz Balra1
 
 	; ha jobb nyilt nyomott
 	cmp ah, 77
-	jz Jobbra
+	jz Jobbra1
 
 	; ha felfele nyilt nyomott
 	cmp ah, 72
-	jz Felfele
+	jz Fel1
 
 	; lefele nyilt nyomott
 	cmp ah, 80
-	jz Lefele
+	jz Le1
 
 	; addig varunk amig valamit nem nyom
 	jmp Var
@@ -124,41 +112,33 @@ Var:
 PVJump:
 	jmp ProgramVege
 
-Balra:
-	pop dx
-	dec dl
-	cmp dl, 1
-	jnc Tarol
-	inc dl
-	jmp Tarol
+Balra1:
+	dec [jatekos1x]		; x koordinatat csokkentjuk
+	cmp [jatekos1x], 1  ; megnezzuk hogy meg a palyan van-e
+	jnc Szamol1			; ha NEM kisebb jott ki mint 1 (tehat meg a palyan van), akkor kirajzoljuk
+	inc [jatekos1x]		; kulonben noveljuk
+	jmp Szamol1			; es akkor rajzoljuk ki
 
-Jobbra:
-	pop dx
-	inc dl
-	cmp dl, 250
-	jc Tarol
-	dec dl
-	jmp Tarol
+Jobbra1:
+	inc [jatekos1x]
+	cmp [jatekos1x], 320
+	jc Szamol1
+	dec [jatekos1x]
+	jmp Szamol1
 
-Felfele:
-	pop dx
-	dec dh
-	cmp dh, 1
-	jnc Tarol
-	inc dh
-	jmp Tarol
+Fel1:
+	dec [jatekos1y]
+	cmp [jatekos1y], 1
+	jnc Szamol1
+	inc [jatekos1y]
+	jmp Szamol1
 
-Lefele:
-	pop dx
-	inc dh
-	cmp dh, 200
-	jc Tarol
-	dec dh
-	jmp Tarol
-
-Tarol:
-	push dx
-	jmp Rajz
+Le1:
+	inc [jatekos1y]
+	cmp [jatekos1y], 200
+	jc Szamol1
+	dec [jatekos1y]
+	jmp Szamol1
 
 Vissza:
     ; visszavaltas vga uzemmodrol
@@ -181,6 +161,10 @@ menu2:
 Code Ends
 
 Data Segment
+	jatekos1x dw 0,
+	jatekos1y dw 0,
+	jatekos2x dw 0,
+	jatekos2y dw 0,
 
 Data Ends
 
