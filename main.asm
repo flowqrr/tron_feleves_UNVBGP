@@ -114,7 +114,7 @@ Rajz2:
 	add ax, [jatekos2voltx] ; ax-ben levo eredmenyhez adjuk az x-et
 
 	mov di, ax			; di-be rakjuk a kiszamolt erteket
-	mov al, 9			; az also reszebe a szint toltjuk (lila)
+	mov al, 77			; az also reszebe a szint toltjuk (vilagoskek)
 	mov es:[di], al     ; az es szegmens di altal mutatott reszet az al-ben levo szinure szinezi
 
 	xor ax, ax
@@ -127,7 +127,7 @@ Rajz2:
 	add ax, [jatekos2x] ; ax-ben levo eredmenyhez adjuk az x-et
 
 	mov di, ax			; di-be rakjuk a kiszamolt erteket
-	mov al, 1			; az also reszebe a szint toltjuk (kek)
+	mov al, 32			; az also reszebe a szint toltjuk (kek)
 	mov es:[di], al     ; az es szegmens di altal mutatott reszet az al-ben levo szinure szinezi
 
 Var:
@@ -262,7 +262,8 @@ Jobbra1:
 	cmp [jatekos1x], 320	; megnezzuk hogy meg a palyan van-e
 	mov [jatekos1irany], 1
 	jc Check2Jump			; ha kisebb jott ki mint 1 (tehat van carry - negativ - meg a palyan van), akkor ugrunk a 2. jatekos checkolasara, mert annak a koordinatait is meg kell nezni mielott rajzolunk
-	dec [jatekos1x]			; kulonben noveljuk
+	dec [jatekos1x]			; kulonben csokkentjuk
+	jmp Check2Jump
 
 Balra1:
 	mov ax, [jatekos1x]
@@ -275,6 +276,7 @@ Balra1:
 	mov [jatekos1irany], 2
 	jnc Check2Jump
 	inc [jatekos1x]
+	jmp Check2Jump
 
 Fel1:
 	mov ax, [jatekos1x]
@@ -287,6 +289,7 @@ Fel1:
 	mov [jatekos1irany], 3
 	jnc Check2Jump
 	inc [jatekos1y]
+	jmp Check2Jump
 
 Le1:
 	mov ax, [jatekos1x]
@@ -299,6 +302,7 @@ Le1:
 	mov [jatekos1irany], 4
 	jc Check2Jump
 	dec [jatekos1y]
+	jmp Check2Jump
 
 Check2Jump:
 	jmp Check2
@@ -314,6 +318,7 @@ Jobbra2:
 	mov [jatekos2irany], 1
 	jc Rajz1Jump
 	dec [jatekos2x]
+	jmp Rajz1Jump
 
 Balra2:
 	mov ax, [jatekos2x]
@@ -326,6 +331,7 @@ Balra2:
 	mov [jatekos2irany], 2
 	jnc Rajz1Jump			; ha NEM kisebb jott ki mint 1 (tehat meg a palyan van), akkor kirajzoljuk
 	inc [jatekos2x]		; kulonben noveljuk
+	jmp Rajz1Jump
 
 Fel2:
 	mov ax, [jatekos2x]
@@ -338,6 +344,7 @@ Fel2:
 	mov [jatekos2irany], 3
 	jnc Rajz1Jump
 	inc [jatekos2y]
+	jmp Rajz1Jump
 
 Le2:
 	mov ax, [jatekos2x]
