@@ -54,9 +54,23 @@ FoMenu:
     ; ha sem space, sem esc volt a billentyu
     jmp FoMenu
 
+; teleport kapu a program vegehez
+PVJump:
+	jmp ProgramVege
+
 Init:
-	mov jatekos1x, 10 ; x koordinata
-	mov jatekos1y, 10 ; y koordinata
+	mov jatekos1x, 300 ; vizszintes koordinata
+	mov jatekos1y, 180 ; fuggoleges koordinata
+
+	mov jatekos2x, 20 ; vizszintes koordinata
+	mov jatekos2y, 20 ; fuggoleges koordinata
+
+	; 1 - jobbra
+	; 2 - balra
+	; 3 - fel
+	; 4 - le
+	mov jatekos1irany, 2
+	mov jatekos2irany, 1
 
 Valtas:
     ; valtas vga (320x200) uzemmodba
@@ -68,34 +82,75 @@ Valtas:
 	mov es, ax       ; extra szegmens
 
 ; pixel =  y * 320 + x
-Szamol1:
+Rajz1:
+	; elozo pozicio kirajzolasa sargaval
+	mov ax, [jatekos1volty] ; ax-be y
+	mov cx, 320				; cx-be 320
+	mul cx					; ax-ban levovel szorozzuk a 320-at (y * 320)
+
+	add ax, [jatekos1voltx] ; ax-ben levo eredmenyhez adjuk az x-et
+
+	mov di, ax			; di-be rakjuk a kiszamolt erteket
+	mov al, 42			; az also reszebe a szint toltjuk (sarga)
+	mov es:[di], al     ; az es szegmens di altal mutatott reszet az al-ben levo szinure szinezi
+
+	xor ax, ax
+
+	; jelenlegi pozicio kirajzolasa pirossal
 	mov ax, [jatekos1y] ; ax-be y
 	mov cx, 320			; cx-be 320
 	mul cx				; ax-ban levovel szorozzuk a 320-at (y * 320)
 
 	add ax, [jatekos1x] ; ax-ben levo eredmenyhez adjuk az x-et
 
-Pixel1:
 	mov di, ax			; di-be rakjuk a kiszamolt erteket
 	mov al, 4			; az also reszebe a szint toltjuk (piros)
+	mov es:[di], al     ; az es szegmens di altal mutatott reszet az al-ben levo szinure szinezi
+
+Rajz2:
+	; elozo pozicio kirajzolasa lilaval
+	mov ax, [jatekos2volty] ; ax-be y
+	mov cx, 320				; cx-be 320
+	mul cx					; ax-ban levovel szorozzuk a 320-at (y * 320)
+
+	add ax, [jatekos2voltx] ; ax-ben levo eredmenyhez adjuk az x-et
+
+	mov di, ax			; di-be rakjuk a kiszamolt erteket
+	mov al, 9			; az also reszebe a szint toltjuk (lila)
+	mov es:[di], al     ; az es szegmens di altal mutatott reszet az al-ben levo szinure szinezi
+
+	xor ax, ax
+
+	; jelenlegi pozicio kirajzolasa kekkel
+	mov ax, [jatekos2y] ; ax-be y
+	mov cx, 320			; cx-be 320
+	mul cx				; ax-ban levovel szorozzuk a 320-at (y * 320)
+
+	add ax, [jatekos2x] ; ax-ben levo eredmenyhez adjuk az x-et
+
+	mov di, ax			; di-be rakjuk a kiszamolt erteket
+	mov al, 1			; az also reszebe a szint toltjuk (kek)
 	mov es:[di], al     ; az es szegmens di altal mutatott reszet az al-ben levo szinure szinezi
 
 Var:
 	; varakozas billentyu leutesere
 	xor ah, ah
 	int 16h
+	
+	; al = lenyomott bill ascii kodja
+	; ah = scan code
 
 	; ha esc-et nyomott
 	cmp al, 27
-	jz Vissza
-
-	; ha bal nyilt nyomott
-	cmp ah, 75
-	jz Balra1
+	jz VisszaJump
 
 	; ha jobb nyilt nyomott
 	cmp ah, 77
-	jz Jobbra1
+	jz Jobbra1Jump
+
+	; ha bal nyilt nyomott
+	cmp ah, 75
+	jz Balra1Jump
 
 	; ha felfele nyilt nyomott
 	cmp ah, 72
@@ -103,42 +158,160 @@ Var:
 
 	; lefele nyilt nyomott
 	cmp ah, 80
-	jz Le1
+	jz Le1Jump
+
+	; ha d-t nyomott
+	cmp al, 100
+	jz Jobbra2Jump
+
+	; ha a-t nyomott
+	cmp al, 97
+	jz Balra2Jump
+
+	; ha w-t nyomott
+	cmp al, 119
+	jz Fel2Jump
+
+	; ha s-t nyomott
+	cmp al, 115
+	jz Le2Jump
 
 	; addig varunk amig valamit nem nyom
 	jmp Var
+	
 
-; teleport kapu a program vegehez
-PVJump:
-	jmp ProgramVege
+VisszaJump:
+	jmp Vissza
 
-Balra1:
-	dec [jatekos1x]		; x koordinatat csokkentjuk
-	cmp [jatekos1x], 1  ; megnezzuk hogy meg a palyan van-e
-	jnc Szamol1			; ha NEM kisebb jott ki mint 1 (tehat meg a palyan van), akkor kirajzoljuk
-	inc [jatekos1x]		; kulonben noveljuk
-	jmp Szamol1			; es akkor rajzoljuk ki
+
+Jobbra1Jump:
+	jmp Jobbra1
+Balra1Jump:
+	jmp Balra1
+Fel1Jump:
+	jmp Fel1
+Le1Jump:
+	jmp Le1
+Jobbra2Jump:
+	jmp Jobbra2
+Balra2Jump:
+	jmp Balra2
+Fel2Jump:
+	jmp Fel2
+Le2Jump:
+	jmp Le2
+	
 
 Jobbra1:
+	; elozo pozicio elmentese
+	mov ax, [jatekos1x]
+    mov [jatekos1voltx], ax
+	mov ax, [jatekos1y]
+    mov [jatekos1volty], ax
+
 	inc [jatekos1x]
 	cmp [jatekos1x], 320
-	jc Szamol1
+	mov [jatekos1irany], 1
+	jc Rajz1Jump
 	dec [jatekos1x]
-	jmp Szamol1
+	jmp Rajz1
+
+Balra1:
+	mov ax, [jatekos1x]
+    mov [jatekos1voltx], ax
+	mov ax, [jatekos1y]
+    mov [jatekos1volty], ax
+
+	dec [jatekos1x]		; x koordinatat csokkentjuk
+	cmp [jatekos1x], 1  ; megnezzuk hogy meg a palyan van-e
+	mov [jatekos1irany], 2
+	jnc Rajz1Jump			; ha NEM kisebb jott ki mint 1 (tehat meg a palyan van), akkor kirajzoljuk
+	inc [jatekos1x]		; kulonben noveljuk
+	jmp Rajz1			; es akkor rajzoljuk ki
 
 Fel1:
+	mov ax, [jatekos1x]
+    mov [jatekos1voltx], ax
+	mov ax, [jatekos1y]
+    mov [jatekos1volty], ax
+
 	dec [jatekos1y]
 	cmp [jatekos1y], 1
-	jnc Szamol1
+	mov [jatekos1irany], 3
+	jnc Rajz1Jump
 	inc [jatekos1y]
-	jmp Szamol1
+	jmp Rajz1
 
 Le1:
+	mov ax, [jatekos1x]
+    mov [jatekos1voltx], ax
+	mov ax, [jatekos1y]
+    mov [jatekos1volty], ax
+
 	inc [jatekos1y]
 	cmp [jatekos1y], 200
-	jc Szamol1
+	mov [jatekos1irany], 4
+	jc Rajz1Jump
 	dec [jatekos1y]
-	jmp Szamol1
+	jmp Rajz1
+
+Rajz1Jump:
+	jmp Rajz1
+
+Jobbra2:
+	mov ax, [jatekos2x]
+    mov [jatekos2voltx], ax
+	mov ax, [jatekos2y]
+    mov [jatekos2volty], ax
+
+	inc [jatekos2x]
+	cmp [jatekos2x], 320
+	mov [jatekos2irany], 1
+	jc Rajz2Jump
+	dec [jatekos2x]
+	jmp Rajz2
+
+Balra2:
+	mov ax, [jatekos2x]
+    mov [jatekos2voltx], ax
+	mov ax, [jatekos2y]
+    mov [jatekos2volty], ax
+
+	dec [jatekos2x]		; x koordinatat csokkentjuk
+	cmp [jatekos2x], 1  ; megnezzuk hogy meg a palyan van-e
+	mov [jatekos2irany], 2
+	jnc Rajz2Jump			; ha NEM kisebb jott ki mint 1 (tehat meg a palyan van), akkor kirajzoljuk
+	inc [jatekos2x]		; kulonben noveljuk
+	jmp Rajz2			; es akkor rajzoljuk ki
+
+Fel2:
+	mov ax, [jatekos2x]
+    mov [jatekos2voltx], ax
+	mov ax, [jatekos2y]
+    mov [jatekos2volty], ax
+
+	dec [jatekos2y]
+	cmp [jatekos2y], 1
+	mov [jatekos2irany], 3
+	jnc Rajz2Jump
+	inc [jatekos2y]
+	jmp Rajz2
+
+Le2:
+	mov ax, [jatekos2x]
+    mov [jatekos2voltx], ax
+	mov ax, [jatekos2y]
+    mov [jatekos2volty], ax
+
+	inc [jatekos2y]
+	cmp [jatekos2y], 200
+	mov [jatekos2irany], 4
+	jc Rajz2Jump
+	dec [jatekos2y]
+	jmp Rajz2
+
+Rajz2Jump:
+	jmp Rajz2
 
 Vissza:
     ; visszavaltas vga uzemmodrol
@@ -165,6 +338,14 @@ Data Segment
 	jatekos1y dw 0,
 	jatekos2x dw 0,
 	jatekos2y dw 0,
+
+	jatekos1irany dw 0,
+	jatekos2irany dw 0,
+
+	jatekos1voltx dw 0,
+	jatekos1volty dw 0,
+	jatekos2voltx dw 0,
+	jatekos2volty dw 0,
 
 Data Ends
 
