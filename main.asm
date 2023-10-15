@@ -79,6 +79,58 @@ Valtas:
 	mov ax, 0a000h   ; video kezdocime
 	mov es, ax       ; extra szegmens
 
+; inditaskor maskepp kell kirajzolni az elozo poziciokat (hogy ne maradjanak szines pixelek az elozo jatekbol)
+InitRajz:
+	; jatekos 1 elozo pozicio kirajzolasa feketevel
+	mov ax, [jatekos1volty] ; ax-be y
+	mov cx, 320				; cx-be 320
+	mul cx					; ax-ban levovel szorozzuk a 320-at (y * 320)
+
+	add ax, [jatekos1voltx] ; ax-ben levo eredmenyhez adjuk az x-et
+
+	mov di, ax			; di-be rakjuk a kiszamolt erteket
+	mov al, 0			; az also reszebe a szint toltjuk (sarga)
+	mov es:[di], al     ; az es szegmens di altal mutatott reszet az al-ben levo szinure szinezi
+
+	xor ax, ax
+
+	; jatekos 1 elozo pozicio kirajzolasa feketevel
+	mov ax, [jatekos2volty] ; ax-be y
+	mov cx, 320				; cx-be 320
+	mul cx					; ax-ban levovel szorozzuk a 320-at (y * 320)
+
+	add ax, [jatekos2voltx] ; ax-ben levo eredmenyhez adjuk az x-et
+
+	mov di, ax			; di-be rakjuk a kiszamolt erteket
+	mov al, 0			; az also reszebe a szint toltjuk (vilagoskek)
+	mov es:[di], al     ; az es szegmens di altal mutatott reszet az al-ben levo szinure szinezi
+
+	xor ax, ax
+
+	; jatekos 1 jelenlegi pozicio kirajzolasa pirossal
+	mov ax, [jatekos1y] ; ax-be y
+	mov cx, 320			; cx-be 320
+	mul cx				; ax-ban levovel szorozzuk a 320-at (y * 320)
+
+	add ax, [jatekos1x] ; ax-ben levo eredmenyhez adjuk az x-et
+
+	mov di, ax			; di-be rakjuk a kiszamolt erteket
+	mov al, 4			; az also reszebe a szint toltjuk (piros)
+	mov es:[di], al     ; az es szegmens di altal mutatott reszet az al-ben levo szinure szinezi
+
+	; jatekos 2 jelenlegi pozicio kirajzolasa kekkel
+	mov ax, [jatekos2y] ; ax-be y
+	mov cx, 320			; cx-be 320
+	mul cx				; ax-ban levovel szorozzuk a 320-at (y * 320)
+
+	add ax, [jatekos2x] ; ax-ben levo eredmenyhez adjuk az x-et
+
+	mov di, ax			; di-be rakjuk a kiszamolt erteket
+	mov al, 32			; az also reszebe a szint toltjuk (kek)
+	mov es:[di], al     ; az es szegmens di altal mutatott reszet az al-ben levo szinure szinezi
+
+	jmp Var
+
 ; pixel =  y * 320 + x
 Rajz1:
 	; elozo pozicio kirajzolasa sargaval
@@ -146,14 +198,13 @@ NincsBill:
 	sub dx, cx	; dx-ben: eltelt = aktualis - regi
 	push ax		; aktualis ido a verembe
 
-	; al-be berakjuk azt az idot, amennyi elteltevel mozogni kell
-	mov al, 1
-	xor ah, ah
-	cmp dx, ax
+	mov al, 1	; al-be berakjuk azt az idot, amennyi elteltevel mozogni kell
+	xor ah, ah	; kiuritjuk az ah-t
+	cmp dx, ax	; megnezzuk, hogy az eltelt ido tobb-e mint amennyi elteltevel mozogni kell
 
 	pop ax		; a verem visszaallitasa (hogy ne legyen mindig egyre tobb dolog benne)
 
-	jc Var		; loop
+	jc Var		; hogyha kevesebb ido telt el (van carry mert kisebb volt), akkor tovabbra is varunk
 
 	pop cx		; regi ido kivetele a verembol
 	push ax		; aktualis ido elmentese
@@ -205,7 +256,7 @@ CheckBillentyu:
 
 	; ha felfele nyilt nyomott
 	cmp ah, 72
-	jz Fel1
+	jz Fel1Jump
 
 	; lefele nyilt nyomott
 	cmp ah, 80
@@ -249,7 +300,50 @@ Fel2Jump:
 	jmp Fel2
 Le2Jump:
 	jmp Le2
-	
+
+CheckUtkozes1:
+	mov ax, [jatekos1y] ; ax-be y
+	mov cx, 320			; cx-be 320
+	mul cx				; ax-ban levovel szorozzuk a 320-at (y * 320)
+	add ax, [jatekos1x] ; ax-ben levo eredmenyhez adjuk az x-et
+	mov di, ax			; di-be rakjuk a kiszamolt erteket
+
+	mov al, es:[di]  	; kiolvassuk az es szegmens di altal mutatott reszerol a pixel szint, es betoltjuk az al-be
+
+	cmp al, 0			; ha fekete, akkor jo helyen van, tehat folytatjuk azzal hogy nezzuk a kovi jatekos poziciojat
+	jz Check2Jump
+
+	cmp al, 32
+	jz DontetlenJump
+
+	jmp MasodikNyertJump
+
+CheckUtkozes2:
+	mov ax, [jatekos2y] ; ax-be y
+	mov cx, 320			; cx-be 320
+	mul cx				; ax-ban levovel szorozzuk a 320-at (y * 320)
+	add ax, [jatekos2x] ; ax-ben levo eredmenyhez adjuk az x-et
+	mov di, ax			; di-be rakjuk a kiszamolt erteket
+
+	mov al, es:[di]  	; kiolvassuk az es szegmens di altal mutatott reszerol a pixel szint, es betoltjuk az al-be
+
+	cmp al, 0			; ha fekete, akkor jo helyen van, tehat folytatjuk azzal hogy nezzuk a kovi jatekos poziciojat
+	jz Rajz1JumpJump
+
+	cmp al, 4
+	jz DontetlenJump
+
+	jmp ElsoNyertJump
+
+Rajz1JumpJump:
+	jmp Rajz1
+ElsoNyertJump:
+	jmp ElsoNyert
+MasodikNyertJump:
+	jmp MasodikNyert
+DontetlenJump:
+	jmp DontetlenLett
+
 
 Jobbra1:
 	; elozo pozicio elmentese
@@ -258,12 +352,14 @@ Jobbra1:
 	mov ax, [jatekos1y]
     mov [jatekos1volty], ax
 
+	mov [jatekos1irany], 1	; az iranyt beallitjuk
 	inc [jatekos1x]			; x koordinatat noveljuk
+
 	cmp [jatekos1x], 320	; megnezzuk hogy meg a palyan van-e
-	mov [jatekos1irany], 1
-	jc Check2Jump			; ha kisebb jott ki mint 1 (tehat van carry - negativ - meg a palyan van), akkor ugrunk a 2. jatekos checkolasara, mert annak a koordinatait is meg kell nezni mielott rajzolunk
+	jc CheckUtkozes1Jump	; ha kisebb jott ki mint 1 (tehat van carry - negativ - meg a palyan van), akkor ugrunk a 2. jatekos checkolasara, mert annak a koordinatait is meg kell nezni mielott rajzolunk
+
 	dec [jatekos1x]			; kulonben csokkentjuk
-	jmp Check2Jump
+	jmp Check2Jump			; es folytatjuk a 2. jatekos koordinatainak a nezesevel
 
 Balra1:
 	mov ax, [jatekos1x]
@@ -271,12 +367,17 @@ Balra1:
 	mov ax, [jatekos1y]
     mov [jatekos1volty], ax
 
+	mov [jatekos1irany], 2
 	dec [jatekos1x]
 	cmp [jatekos1x], 1
-	mov [jatekos1irany], 2
-	jnc Check2Jump
+	jnc CheckUtkozes1Jump
 	inc [jatekos1x]
 	jmp Check2Jump
+
+CheckUtkozes1Jump:
+	jmp CheckUtkozes1
+Check2Jump:
+	jmp Check2
 
 Fel1:
 	mov ax, [jatekos1x]
@@ -284,10 +385,10 @@ Fel1:
 	mov ax, [jatekos1y]
     mov [jatekos1volty], ax
 
+	mov [jatekos1irany], 3
 	dec [jatekos1y]
 	cmp [jatekos1y], 1
-	mov [jatekos1irany], 3
-	jnc Check2Jump
+	jnc CheckUtkozes1Jump
 	inc [jatekos1y]
 	jmp Check2Jump
 
@@ -297,15 +398,13 @@ Le1:
 	mov ax, [jatekos1y]
     mov [jatekos1volty], ax
 
+	mov [jatekos1irany], 4
 	inc [jatekos1y]
 	cmp [jatekos1y], 200
-	mov [jatekos1irany], 4
-	jc Check2Jump
+	jc CheckUtkozes1Jump
 	dec [jatekos1y]
 	jmp Check2Jump
 
-Check2Jump:
-	jmp Check2
 
 Jobbra2:
 	mov ax, [jatekos2x]
@@ -313,10 +412,10 @@ Jobbra2:
 	mov ax, [jatekos2y]
     mov [jatekos2volty], ax
 
+	mov [jatekos2irany], 1
 	inc [jatekos2x]
 	cmp [jatekos2x], 320
-	mov [jatekos2irany], 1
-	jc Rajz1Jump
+	jc CheckUtkozes2Jump
 	dec [jatekos2x]
 	jmp Rajz1Jump
 
@@ -326,12 +425,15 @@ Balra2:
 	mov ax, [jatekos2y]
     mov [jatekos2volty], ax
 
+	mov [jatekos2irany], 2
 	dec [jatekos2x]		; x koordinatat csokkentjuk
 	cmp [jatekos2x], 1  ; megnezzuk hogy meg a palyan van-e
-	mov [jatekos2irany], 2
-	jnc Rajz1Jump			; ha NEM kisebb jott ki mint 1 (tehat meg a palyan van), akkor kirajzoljuk
+	jnc CheckUtkozes2Jump			; ha NEM kisebb jott ki mint 1 (tehat meg a palyan van), akkor kirajzoljuk
 	inc [jatekos2x]		; kulonben noveljuk
 	jmp Rajz1Jump
+
+CheckUtkozes2Jump:
+	jmp CheckUtkozes2
 
 Fel2:
 	mov ax, [jatekos2x]
@@ -339,10 +441,10 @@ Fel2:
 	mov ax, [jatekos2y]
     mov [jatekos2volty], ax
 
+	mov [jatekos2irany], 3
 	dec [jatekos2y]
 	cmp [jatekos2y], 1
-	mov [jatekos2irany], 3
-	jnc Rajz1Jump
+	jnc CheckUtkozes2Jump
 	inc [jatekos2y]
 	jmp Rajz1Jump
 
@@ -352,10 +454,10 @@ Le2:
 	mov ax, [jatekos2y]
     mov [jatekos2volty], ax
 
+	mov [jatekos2irany], 4
 	inc [jatekos2y]
 	cmp [jatekos2y], 200
-	mov [jatekos2irany], 4
-	jc Rajz1Jump
+	jc CheckUtkozes2Jump
 	dec [jatekos2y]
 
 ; miutan minden jatekos mozgatasa megvolt, rajzolunk
@@ -363,11 +465,111 @@ Rajz1Jump:
 	jmp Rajz1
 
 Vissza:
+	; visszavaltas vga uzemmodrol
+    mov ax, 03h
+    int 10h
+	jmp ProgramVege
+
+ElsoNyert:
     ; visszavaltas vga uzemmodrol
     mov ax, 03h
     int 10h
 
+	; kurzor pozicionalas (elsonyert kiiras)
+    mov ah, 02h
+	mov bh, 0       ; video lap szama
+	mov dh, 9       ; sor
+	mov dl, 32      ; oszlop
+	int 10h
+    
+    mov dx, offset jatekos1nyert
+	mov ah, 09h     ; 21h tudja hogy a kepernyore kell irnia a STRINGET, ami a dl-ben van
+	int 21h
+
+	jmp MenuKiiras
+
+InitJump:
+	jmp Init
+
+MasodikNyert:
+    ; visszavaltas vga uzemmodrol
+    mov ax, 03h
+    int 10h
+
+	; kurzor pozicionalas (masodiknyert kiiras)
+    mov ah, 02h
+	mov bh, 0       ; video lap szama
+	mov dh, 9       ; sor
+	mov dl, 31      ; oszlop
+	int 10h
+    
+    mov dx, offset jatekos2nyert
+	mov ah, 09h     ; 21h tudja hogy a kepernyore kell irnia a STRINGET, ami a dl-ben van
+	int 21h
+
+	jmp MenuKiiras
+
+DontetlenLett:
+	; visszavaltas vga uzemmodrol
+    mov ax, 03h
+    int 10h
+
+	; kurzor pozicionalas (masodiknyert kiiras)
+    mov ah, 02h
+	mov bh, 0       ; video lap szama
+	mov dh, 9       ; sor
+	mov dl, 37      ; oszlop
+	int 10h
+    
+    mov dx, offset dontetlen
+	mov ah, 09h     ; 21h tudja hogy a kepernyore kell irnia a STRINGET, ami a dl-ben van
+	int 21h
+
+	jmp MenuKiiras
+
+
+MenuKiiras:
+	; kurzor pozicionalas (start kiiras)
+    mov ah, 02h
+	mov bh, 0        ; video lap szama
+	mov dh, 11       ; sor
+	mov dl, 31       ; oszlop
+	int 10h
+    
+    mov dx, offset menu1
+	mov ah, 09h     ; 21h tudja hogy a kepernyore kell irnia a STRINGET, ami a dl-ben van
+	int 21h
+	
+    ; kurzor pozicionalas (exit kiiras)
+	mov ah, 02h
+	mov bh, 0        ; video lap szama
+	mov dh, 12       ; sor
+	mov dl, 36       ; oszlop
+	int 10h
+	
+	mov dx, offset menu2
+	mov ah, 09h     ; 21h tudja hogy a kepernyore kell irnia a STRINGET, ami a dl-ben van
+	int 21h
+
+	xor ax, ax     ; ax nullazasa
+	int 16h        ; varakozas egy billenytu lenyomasara
+
+	; a leutott billentyu a space volt-e
+    cmp al, 32
+	jz InitJump
+	
+    ; a leutott billentyu esc volt-e
+	cmp al, 27
+	jz ProgramVege
+
+	jmp MenuKiiras
+
+
 ProgramVege:
+	; kepernyo torles:
+    mov ax, 03h
+	int 10h
+
 	pop dx
 
 	; vezerles visszaadasa
@@ -379,6 +581,12 @@ menu1:
 	db "Start Game (SPACE)$" ; hossz = 18
 menu2:
 	db "Exit (ESC)$" ; hossz = 10
+jatekos1nyert:
+	db "Red player wins!$" ; hossz = 16
+jatekos2nyert:
+	db "Blue player wins!$" ; hossz = 17
+dontetlen:
+	db "Draw!$" ; hossz = 5
 
 Code Ends
 
