@@ -635,18 +635,18 @@ Code Ends
 
 Data Segment
 	; dw - define word (allocates 2 bytes)
-	jatekos1x dw 0,
-	jatekos1y dw 0,
-	jatekos2x dw 0,
-	jatekos2y dw 0,
+	jatekos1x dw 0
+	jatekos1y dw 0
+	jatekos2x dw 0
+	jatekos2y dw 0
 
-	jatekos1irany dw 0,
-	jatekos2irany dw 0,
+	jatekos1irany dw 0
+	jatekos2irany dw 0
 
-	jatekos1voltx dw 0,
-	jatekos1volty dw 0,
-	jatekos2voltx dw 0,
-	jatekos2volty dw 0,
+	jatekos1voltx dw 0
+	jatekos1volty dw 0
+	jatekos2voltx dw 0
+	jatekos2volty dw 0
 
 Data Ends
 
