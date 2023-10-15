@@ -81,6 +81,48 @@ Valtas:
 
 ; inditaskor maskepp kell kirajzolni az elozo poziciokat (hogy ne maradjanak szines pixelek az elozo jatekbol)
 InitRajz:
+	; zold keret kirajzolasa
+	mov cx, 0		; ciklusvaltozo
+	FelsoAlsoKeret:
+		; felso keret
+		mov di, cx		; di-be rakjuk a pixel helyet
+		mov al, 2		; al-be a szint (zold)
+		mov es:[di], al ; az es szegmens di altal mutatott reszet az al-ben levo szinure szinezi
+
+		; also keret
+		add di, 320*199 ; also reszen ugyanezen a pozicion levo pixel helyenek a kiszamitasa -> minden sorban 320 pixel, es 199 sorral lejjebb van mint az elozo
+		mov es:[di], al
+
+		; ciklus
+		inc cx
+		cmp cx, 320
+		jl FelsoAlsoKeret
+
+	mov cx, 0
+	BalJobbKeret:
+		; bal keret
+		mov ax, cx		; ax-be rakjuk a ciklusvaltozot, hogy azt tudjuk megszorozni 320-al mindig
+		mov bx, 320		; konstans amivel szorzunk
+		mul bx			; ax erteket megszorozunk a bx-el
+		mov di, ax		; di-be rakjuk a pixel helyet
+
+		mov al, 2		; al-be rakjuk a szint
+		mov es:[di], al ; az es szegmens di altal mutatott reszet az al-ben levo szinure szinezi
+
+		; jobb keret
+		mov ax, cx
+		mov bx, 320
+		mul bx
+		mov di, ax
+		add di, 319
+
+		mov al, 2		; al-be rakjuk a szint
+		mov es:[di], al  ; set pixel color
+
+		inc cx
+		cmp cx, 200
+		jl BalJobbKeret
+
 	; jatekos 1 elozo pozicio kirajzolasa feketevel
 	mov ax, [jatekos1volty] ; ax-be y
 	mov cx, 320				; cx-be 320
@@ -89,7 +131,7 @@ InitRajz:
 	add ax, [jatekos1voltx] ; ax-ben levo eredmenyhez adjuk az x-et
 
 	mov di, ax			; di-be rakjuk a kiszamolt erteket
-	mov al, 0			; az also reszebe a szint toltjuk (sarga)
+	mov al, 0			; az also reszebe a szint toltjuk (fekete)
 	mov es:[di], al     ; az es szegmens di altal mutatott reszet az al-ben levo szinure szinezi
 
 	xor ax, ax
@@ -102,7 +144,7 @@ InitRajz:
 	add ax, [jatekos2voltx] ; ax-ben levo eredmenyhez adjuk az x-et
 
 	mov di, ax			; di-be rakjuk a kiszamolt erteket
-	mov al, 0			; az also reszebe a szint toltjuk (vilagoskek)
+	mov al, 0			; az also reszebe a szint toltjuk (fekete)
 	mov es:[di], al     ; az es szegmens di altal mutatott reszet az al-ben levo szinure szinezi
 
 	xor ax, ax
@@ -359,7 +401,7 @@ Jobbra1:
 	jc CheckUtkozes1Jump	; ha kisebb jott ki mint 1 (tehat van carry - negativ - meg a palyan van), akkor ugrunk a 2. jatekos checkolasara, mert annak a koordinatait is meg kell nezni mielott rajzolunk
 
 	dec [jatekos1x]			; kulonben csokkentjuk
-	jmp Check2Jump			; es folytatjuk a 2. jatekos koordinatainak a nezesevel
+	jmp CheckUtkozes1Jump	; es folytatjuk a 2. jatekos koordinatainak a nezesevel
 
 Balra1:
 	mov ax, [jatekos1x]
@@ -372,7 +414,7 @@ Balra1:
 	cmp [jatekos1x], 1
 	jnc CheckUtkozes1Jump
 	inc [jatekos1x]
-	jmp Check2Jump
+	jmp CheckUtkozes1Jump
 
 CheckUtkozes1Jump:
 	jmp CheckUtkozes1
@@ -390,7 +432,7 @@ Fel1:
 	cmp [jatekos1y], 1
 	jnc CheckUtkozes1Jump
 	inc [jatekos1y]
-	jmp Check2Jump
+	jmp CheckUtkozes1Jump
 
 Le1:
 	mov ax, [jatekos1x]
@@ -403,7 +445,7 @@ Le1:
 	cmp [jatekos1y], 200
 	jc CheckUtkozes1Jump
 	dec [jatekos1y]
-	jmp Check2Jump
+	jmp CheckUtkozes1Jump
 
 
 Jobbra2:
@@ -417,7 +459,7 @@ Jobbra2:
 	cmp [jatekos2x], 320
 	jc CheckUtkozes2Jump
 	dec [jatekos2x]
-	jmp Rajz1Jump
+	jmp CheckUtkozes2Jump
 
 Balra2:
 	mov ax, [jatekos2x]
@@ -426,11 +468,11 @@ Balra2:
     mov [jatekos2volty], ax
 
 	mov [jatekos2irany], 2
-	dec [jatekos2x]		; x koordinatat csokkentjuk
-	cmp [jatekos2x], 1  ; megnezzuk hogy meg a palyan van-e
-	jnc CheckUtkozes2Jump			; ha NEM kisebb jott ki mint 1 (tehat meg a palyan van), akkor kirajzoljuk
-	inc [jatekos2x]		; kulonben noveljuk
-	jmp Rajz1Jump
+	dec [jatekos2x]			; x koordinatat csokkentjuk
+	cmp [jatekos2x], 1 	 	; megnezzuk hogy meg a palyan van-e
+	jnc CheckUtkozes2Jump	; ha NEM kisebb jott ki mint 1 (tehat meg a palyan van), akkor kirajzoljuk
+	inc [jatekos2x]			; kulonben noveljuk
+	jmp CheckUtkozes2Jump
 
 CheckUtkozes2Jump:
 	jmp CheckUtkozes2
@@ -446,7 +488,7 @@ Fel2:
 	cmp [jatekos2y], 1
 	jnc CheckUtkozes2Jump
 	inc [jatekos2y]
-	jmp Rajz1Jump
+	jmp CheckUtkozes2Jump
 
 Le2:
 	mov ax, [jatekos2x]
@@ -459,6 +501,7 @@ Le2:
 	cmp [jatekos2y], 200
 	jc CheckUtkozes2Jump
 	dec [jatekos2y]
+	jmp CheckUtkozes2Jump
 
 ; miutan minden jatekos mozgatasa megvolt, rajzolunk
 Rajz1Jump:
